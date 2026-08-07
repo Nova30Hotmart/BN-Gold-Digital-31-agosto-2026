@@ -441,18 +441,23 @@ h2.disp{font-size:clamp(30px,4.4vw,52px);color:#fff;max-width:20ch}
 document.documentElement.classList.add('js');
 
 var pl = document.getElementById('preload');
-pl.addEventListener('click', function(){ pl.style.animation='none'; pl.style.display='none'; });
+if(pl) {
+  pl.addEventListener('click', function(){ pl.style.animation='none'; pl.style.display='none'; });
+}
 
 function heroIn(){ var h=document.querySelector('.hero'); if(h) h.classList.add('loaded'); }
 window.addEventListener('load', function(){ setTimeout(heroIn,100); });
 setTimeout(heroIn, 700);
 
 var nav = document.getElementById('nav');
-window.addEventListener('scroll', function(){ nav.classList.toggle('solid', window.scrollY > 40); });
+if(nav) {
+  window.addEventListener('scroll', function(){ nav.classList.toggle('solid', window.scrollY > 40); });
+}
 
 var io = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
 }, {threshold:.14, rootMargin:'0px 0px -6% 0px'});
+
 document.querySelectorAll('.reveal').forEach(function(el, i){
   el.style.transitionDelay = ((i % 4) * 0.07) + 's';
   io.observe(el);
@@ -467,45 +472,55 @@ document.querySelectorAll('.bcard').forEach(function(c){
 });
 
 /* ==========================================================
-   ENDPOINT del formulario — pendiente de definir.
-   Vacío: valida y redirige a gracias.html sin enviar datos.
+   ENDPOINT APONTANDO PARA A SERVERLESS FUNCTION DA VERCEL
    ========================================================== */
-var ENDPOINT = "";
+var ENDPOINT = "/api/subscribe";
 var GRACIAS  = "gracias.html";
 
 var btn = document.getElementById('submitBtn');
 var err = document.getElementById('formError');
 var campos = ['nombre','email'];
 
-function fallar(m){ err.textContent = m; err.style.display = 'block'; }
+function fallar(m){ if(err){ err.textContent = m; err.style.display = 'block'; } }
 
-btn.addEventListener('click', function(){
-  err.style.display = 'none';
-  var data = {};
-  for (var i=0;i<campos.length;i++){
-    var el = document.getElementById(campos[i]);
-    if(!el.value.trim()){ fallar('Completa todos los campos para confirmar tu registro.'); el.focus(); return; }
-    data[campos[i]] = el.value.trim();
-  }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)){
-    fallar('Revisa tu correo electrónico.'); document.getElementById('email').focus(); return;
-  }
-  data.tier = 'gold';
-  data.evento = 'camino-a-black-november-digital';
+if(btn) {
+  btn.addEventListener('click', function(){
+    if(err) err.style.display = 'none';
+    var data = {};
+    for (var i=0;i<campos.length;i++){
+      var el = document.getElementById(campos[i]);
+      if(!el || !el.value.trim()){ fallar('Completa todos los campos para confirmar tu registro.'); if(el) el.focus(); return; }
+      data[campos[i]] = el.value.trim();
+    }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)){
+      fallar('Revisa tu correo electrónico.'); document.getElementById('email').focus(); return;
+    }
+    
+    data.tier = 'gold';
+    data.evento = 'camino-a-black-november-digital';
 
-  btn.textContent = 'Enviando...'; btn.disabled = true;
+    btn.textContent = 'Enviando...'; btn.disabled = true;
 
-  if (ENDPOINT){
-    fetch(ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)})
-      .then(function(){ window.location.href = GRACIAS; })
-      .catch(function(){
-        fallar('No pudimos enviar tu registro. Intenta de nuevo en unos segundos.');
-        btn.textContent = 'Confirmar mi registro'; btn.disabled = false;
-      });
-  } else {
-    window.location.href = GRACIAS;
-  }
-});
+    if (ENDPOINT){
+      fetch(ENDPOINT, {
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify(data)
+      })
+        .then(function(response){ 
+          if (!response.ok) throw new Error('Falha na resposta do servidor');
+          window.location.href = GRACIAS; 
+        })
+        .catch(function(error){
+          console.error(error);
+          fallar('No pudimos enviar tu registro. Intenta de nuevo en unos segundos.');
+          btn.textContent = 'Confirmar mi registro'; btn.disabled = false;
+        });
+    } else {
+      window.location.href = GRACIAS;
+    }
+  });
+}
 </script>
 </body>
 </html>
